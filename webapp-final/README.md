@@ -6,12 +6,16 @@ THIS IS THE MAIN PROJECT STRUCTURE, PLEASE ARRANGE THE PROJECT ACCORDING TO THIS
 
 webapp-final/ <-- The main Git repository root
 │
-├── api/ <-- API files
+├── api/ <-- API, Backend and Database files
 │ ├── node_modules/
 │ ├── .env
 │ ├── package.json
 │ ├── package-lock.json
 │ └── server.js
+│ ├
+│ ├── Backend/ <- Backend folder
+│ ├
+│ └── database/ <- Database folder
 │
 ├── frontend/ <-- The React Frontend FIles
 │ ├── node_modules/
