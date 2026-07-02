@@ -4,12 +4,16 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); // 1. Import JWT
+const rateLimit = require('express-rate-limit'); // 2. Import rate limiting middleware
+const {body, param, validationResult} = require('express-validator'); // 3. Import express-validator
+const bcrypt = require('bcryptjs'); // 4. Import bcrypt for password hashing
 
 const app = express();
 
 // Pull the variables from the process.env object
 const PORT = process.env.PORT || 3000; // Fallback to 3000 if not in .env
 const JWT_SECRET = process.env.JWT_SECRET;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 
 if (!JWT_SECRET) {
     console.error("FATAL ERROR: JWT_SECRET is not defined in .env file.");
@@ -29,9 +33,45 @@ app.use((req, res, next) => {
 
 // --- Security & Middleware ---
 app.use(helmet()); // Secures HTTP headers
-app.use(cors());   // Allows frontend to connect
-app.use(express.json()); // Allows your API to read JSON data sent in requests
 
+app.use(cors({ 
+    origin: ALLOWED_ORIGIN,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json()); // Allows API to read JSON data sent in requests
+
+// --- Rate Limiting ---
+ 
+// Strict limiter for login: 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { error: "Too many login attempts. Please try again in 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// General API limiter: 100 requests per 15 minutes per IP
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: "Too many requests. Please slow down." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+ 
+app.use('/api/', apiLimiter);
+
+// --- Validation Error Handler ---
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+};
 
 // --- Authentication Middleware (The Bouncer) ---
 const authenticateToken = (req, res, next) => {
@@ -71,27 +111,43 @@ app.get('/api/profile', authenticateToken, (req, res) => {
 });
 
 // 2. Login (POST)
-app.post('/api/users/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // Basic validation check (Security aspect!)
-    if (!username || !password) {
-        return res.status(400).json({ error: "Username and password are required" });
+app.post(
+    '/api/users/login',
+    loginLimiter,
+    [
+        body('username')
+            .trim()
+            .notEmpty().withMessage("Username is required.")
+            .isLength({ max: 50 }).withMessage("Username too long.")
+            .escape(),
+        body('password')
+            .notEmpty().withMessage("Password is required.")
+            .isLength({ min: 8, max: 128 }).withMessage("Password must be 8–128 characters."),
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+        const { username, password } = req.body;
+ 
+        // --- Placeholder: swap this block out when a real DB is connected ---
+        // Hash comparison example (bcrypt.compare returns true/false):
+        //   const isMatch = await bcrypt.compare(password, userFromDB.passwordHash);
+        //   if (!isMatch) return res.status(401).json({ error: "Invalid credentials." });
+        // Password hashing on registration:
+        //   const passwordHash = await bcrypt.hash(password, 12);
+        // --------------------------------------------------------------------
+ 
+        const token = jwt.sign(
+            { username: username, role: "user" },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+ 
+        res.status(200).json({
+            message: "Login successful",
+            token: token
+        });
     }
-
-    // Generate the real JWT 
-    const token = jwt.sign(
-        { username: username, role: "user" }, 
-        JWT_SECRET,                           
-        { expiresIn: '1h' }                   
-    );
-
-    // Return the generated token
-    res.status(200).json({
-        message: "Login successful",
-        token: token 
-    });
-});
+);
 
 // 3. Show Movie Page (GET) - PUBLIC ROUTE
 app.get('/api/movies/:id', (req, res) => {
