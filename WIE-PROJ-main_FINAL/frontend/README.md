@@ -1,16 +1,40 @@
-# React + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the CinePost movie microblogging platform.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## React Compiler
+The app runs at `http://localhost:5173`. The backend must be running at `http://localhost:3000` first.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Pages
 
-## Expanding the ESLint configuration
+| Route | Component | Description |
+|---|---|---|
+| `/` | MovieSearch | Browse and search all movies |
+| `/movie/:id` | MovieDetail | Movie detail page with reviews |
+| `/users` | UserSearch | Discover and search users |
+| `/users/:id` | UserProfile | Public user profile with posts and stats |
+| `/login` | Login | Register or log in |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Components
+
+| Component | Responsibility |
+|---|---|
+| `App.jsx` + `TopNav` | Routing, auth state, navigation bar |
+| `Login` | Registration and login forms |
+| `MovieSearch` | Movie listing with search input |
+| `MovieCard` | Single movie summary card |
+| `MovieDetail` | Full movie page with reviews, like/reply counts |
+| `UserSearch` | User discovery with shared-taste ranking |
+| `UserProfile` | User profile: posts, follower/following counts, follow button |
+| `Feed` | Reverse-chronological feed for logged-in users |
+
+## Auth state
+
+On login or register, the JWT token and user object are saved to `localStorage`. Auth state is restored on page refresh. Logging out clears both values.
